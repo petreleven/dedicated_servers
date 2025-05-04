@@ -24,8 +24,8 @@ COPY scripts /home/steam/server/scripts
 RUN chmod +x home/steam/server/scripts/*.sh
 
 ENV BEPINEX_VERSION=5.4.2202
-RUN wget -q -0 /tmp/BenInExPack.zip \
+RUN wget -q -O /tmp/BepInExPack.zip \
     "https://gcdn.thunderstore.io/live/repository/packages/denikson-BepInExPack_Valheim-${BEPINEX_VERSION}.zip" && \
-    unzip -q /tmp/BenInExPack.zip  -d /home/steam/server/BeniEx && \
-    rm /tmp/BenInExPack.zip
+    unzip -q /tmp/BepInExPack.zip -d /home/steam/server/BepInEx && \
+    rm /tmp/BepInExPack.zip
 

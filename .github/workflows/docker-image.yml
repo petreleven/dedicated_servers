@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: 'Your name'
+        description: "Your name"
         required: true
-        default: 'World'
+        default: "World"
 jobs:
   build:
     runs-on: ubuntu-latest
