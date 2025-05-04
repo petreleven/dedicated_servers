@@ -3,9 +3,10 @@ set -e
 echo "Installing/updating valheim server...."
 
 INSTALL_DIR=/valheim
-/home/steam/server/script.sh  +@sSteamCmdForcePlatformType linux \
+chmod +x  /home/steam/steamcmd/steamcmd.sh
+/home/steam/steamcmd/steamcmd.sh  +@sSteamCmdForcePlatformType linux \
     +login anonymous \
-    +force_install_dir "$INSTALL_DIR" \
+    +force_install_dir "/home/steam/server/scripts" \
     +app_update 896660 validate \
     +quit
 
