@@ -1,9 +1,12 @@
 FROM cm2network/steamcmd
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libatomic1 \
-    libpulse-dev \
-    libpulse0
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libatomic1 \
+        libpulse-dev \
+        libpulse0 && \
+    rm -rf /var/lib/apt/lists/*
+
 
 RUN mkdir -p /home/steam/server   /home/steam/steamcmd
 
