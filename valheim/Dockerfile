@@ -1,11 +1,17 @@
 FROM cm2network/steamcmd
 
-RUN apt-get update && \
+FROM cm2network/steamcmd
+
+RUN apt-get update || true && \
     apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        gnupg \
         libatomic1 \
         libpulse-dev \
         libpulse0 && \
     rm -rf /var/lib/apt/lists/*
+
 
 
 RUN mkdir -p /home/steam/server   /home/steam/steamcmd
