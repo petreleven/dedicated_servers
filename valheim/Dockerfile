@@ -1,5 +1,8 @@
 FROM cm2network/steamcmd:latest
 
+# Switch to root to install additional dependencies
+USER root
+
 # Install additional runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -22,5 +25,9 @@ RUN wget -qO /tmp/BepInExPack.zip \
     unzip -q /tmp/BepInExPack.zip -d /home/steam/server/BepInEx && \
     rm /tmp/BepInExPack.zip
 
+# Revert to steam user
+USER steam
+
 # Default startup: install then launch
 CMD ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh && /home/steam/server/scripts/start.sh"]
+``` ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh && /home/steam/server/scripts/start.sh"]
