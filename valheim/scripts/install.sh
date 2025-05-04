@@ -1,11 +1,11 @@
 #!/bin/sh
 set -e
-
+cd ~
 echo "Installing/updating Valheim server..."
-INSTALL_DIR=/valheim
+INSTALL_DIR=/home/steam/server/valheim
 
 # Use the system steamcmd provided by the base image
-steamcmd +login anonymous \
+ ./steamcmd.sh  +login anonymous \
     +force_install_dir "$INSTALL_DIR" \
     +app_update 896660 validate \
     +quit
