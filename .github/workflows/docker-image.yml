@@ -1,16 +1,16 @@
 name: Docker Image CI
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: |
-        docker build ./valheim --file Dockerfile --tag petreleven11/valheim_server:v1.0.0
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-        docker push  petreleven11/valheim_server:v1.0.0
+      - uses: actions/checkout@v4
+      - name: Build the Docker image
+        run: |
+          docker build ./valheim --file Dockerfile --tag petreleven11/valheim_server:v1.0.0
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          docker push  petreleven11/valheim_server:v1.0.0
