@@ -8,6 +8,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libatomic1 \
         libpulse-dev \
+        wget \
         libpulse0 && \
     rm -rf /var/lib/apt/lists/*
 
