@@ -9,6 +9,7 @@ RUN apt-get update && \
         libatomic1 \
         libpulse-dev \
         wget \
+        unzip \
         libpulse0 && \
     rm -rf /var/lib/apt/lists/*
 
