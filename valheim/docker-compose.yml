@@ -1,7 +1,6 @@
 services:
   valheim_base_server:
-    build:
-      context: .
+    image: petreleven11/valheim_server:v0.0.1
     container_name: valheim
     ports:
       - "2456:2456/udp"

@@ -29,3 +29,6 @@ RUN wget -q -O /tmp/BepInExPack.zip \
     unzip -q /tmp/BepInExPack.zip -d /home/steam/server/BepInEx && \
     rm /tmp/BepInExPack.zip
 
+CMD ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh && /home/steam/server/scripts/start.sh"]
+
+
