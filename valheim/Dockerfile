@@ -1,6 +1,4 @@
-FROM cm2network/steamcmd
-
-FROM cm2network/steamcmd
+FROM ubuntu:22.04
 
 RUN apt-get update || true && \
     apt-get install -y --no-install-recommends \
