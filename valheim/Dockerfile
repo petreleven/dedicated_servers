@@ -30,4 +30,3 @@ USER steam
 
 # Default startup: install then launch
 CMD ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh && /home/steam/server/scripts/start.sh"]
-``` ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh && /home/steam/server/scripts/start.sh"]
