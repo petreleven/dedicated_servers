@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-cd valheim
+cd /valheim
 
 exec ./valheim_server.x86_64 -nographics -batchmode \
     -name       "${SERVER_NAME}" \

@@ -14,7 +14,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Create server directory
-RUN mkdir -p /home/steam/server
+RUN mkdir -p /home/steam/server /valheim
 
 # Copy and make scripts executable
 COPY scripts /home/steam/server/scripts
@@ -27,10 +27,15 @@ RUN wget -qO /tmp/BepInExPack.zip \
     unzip -q /tmp/BepInExPack.zip -d /home/steam/server/BepInEx && \
     rm /tmp/BepInExPack.zip
 
-# Revert to steam user
-RUN mkdir -p /valheim
+# Set correct permissions
 RUN chown -R steam:steam /home/steam
 RUN chown -R steam:steam /valheim
+
+# Switch to steam user for installation
 USER steam
-# Default startup: install then launch
-CMD ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh.sh"]
+
+# Run the install script
+RUN /home/steam/server/scripts/install.sh
+
+# Default startup command
+CMD ["/bin/bash", "-c", "/home/steam/server/scripts/start.sh"]
