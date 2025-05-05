@@ -31,8 +31,6 @@ RUN wget -qO /tmp/BepInExPack.zip \
 RUN mkdir -p /valheim
 RUN chown -R steam:steam /home/steam
 RUN chown -R steam:steam /valheim
-RUN /home/steam/server/scripts/install.sh
 USER steam
-
 # Default startup: install then launch
-CMD ["/bin/bash", "-c", "/home/steam/server/scripts/start.sh"]
+CMD ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh.sh"]
