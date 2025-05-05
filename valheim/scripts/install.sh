@@ -13,5 +13,4 @@ INSTALL_DIR=/valheim
 echo "Copying BepInEx into game folder..."
 cp -r /home/steam/server/BepInEx/. "$INSTALL_DIR"
 
-# Hand off to the start script
-exec /home/steam/server/scripts/start.sh
+
