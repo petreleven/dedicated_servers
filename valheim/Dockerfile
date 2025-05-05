@@ -29,7 +29,8 @@ RUN wget -qO /tmp/BepInExPack.zip \
 
 # Revert to steam user
 RUN chown -R steam:steam /home/steam
+RUN /home/steam/server/scripts/install.sh
 USER steam
 
 # Default startup: install then launch
-CMD ["/bin/bash", "-c", "/home/steam/server/scripts/install.sh && /home/steam/server/scripts/start.sh"]
+CMD ["/bin/bash", "-c", "/home/steam/server/scripts/start.sh"]
