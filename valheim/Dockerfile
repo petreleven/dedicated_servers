@@ -28,6 +28,7 @@ RUN wget -qO /tmp/BepInExPack.zip \
     rm /tmp/BepInExPack.zip
 
 # Revert to steam user
+RUN chown -R steam:steam /home/steam
 USER steam
 
 # Default startup: install then launch
