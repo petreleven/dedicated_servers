@@ -29,6 +29,7 @@ RUN wget -qO /tmp/BepInExPack.zip \
 
 # Revert to steam user
 RUN chown -R steam:steam /home/steam
+RUN mkdir -p /valheim
 RUN chown -R steam:steam /valheim
 RUN /home/steam/server/scripts/install.sh
 USER steam
