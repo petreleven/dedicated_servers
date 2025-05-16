@@ -10,8 +10,5 @@ INSTALL_DIR=/valheim
     +app_update 896660 validate \
     +quit
 
-# Merge in the BepInEx files
-echo "Copying BepInEx into game folder..."
-cp -r /home/steam/server/BepInEx/. "$INSTALL_DIR"
 
 echo "Valheim server installation complete!"

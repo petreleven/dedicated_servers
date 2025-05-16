@@ -23,9 +23,12 @@ RUN chmod +x /home/steam/server/scripts/*.sh
 # Download and unpack BepInEx mod-loader pack
 ENV BEPINEX_VERSION=5.4.2202
 RUN wget -qO /tmp/BepInExPack.zip \
-    "https://gcdn.thunderstore.io/live/repository/packages/denikson-BepInExPack_Valheim-${BEPINEX_VERSION}.zip" && \
+      "https://gcdn.thunderstore.io/live/repository/packages/denikson-BepInExPack_Valheim-${BEPINEX_VERSION}.zip" && \
     unzip -q /tmp/BepInExPack.zip -d /home/steam/server/BepInEx && \
     rm /tmp/BepInExPack.zip
+
+# Move the inner BepInEx directory into the Valheim root
+RUN mv /home/steam/server/BepInEx/BepInExPack_Valheim/BepInEx /valheim/BepInEx
 
 # Set correct permissions
 RUN chown -R steam:steam /home/steam
