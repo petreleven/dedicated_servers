@@ -4,14 +4,17 @@ FROM cm2network/steamcmd:latest
 USER root
 
 # Install additional runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libatomic1 \
-        libpulse-dev \
-        wget \
-        unzip \
-        libpulse0 && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    libatomic1 \
+    libpulse0 \
+    libstdc++6 \
+    libc6 \
+    libgcc1 \
+    curl \
+    wget \
+    unzip \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create server directory
 RUN mkdir -p /home/steam/server /valheim
