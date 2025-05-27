@@ -1,0 +1,14 @@
+services:
+  sftp:
+    container_name: sftpserver
+    image: atmoz/sftp
+    ports:
+      - "2222:22"
+    ulimits:
+      nofile:
+        hard: 65536
+        soft: 65536
+    volumes:
+      - ./users.conf:/etc/sftp/users.conf:ro
+      - ./init.sh:/etc/sftp.d/init.sh:ro
+      - /srv/allservers/admin:/home/admin/valheim

@@ -1,17 +1,16 @@
 services:
-  valheim_base_server:
+  valheim_server:
     image: petreleven11/valheim_server:v0.0.1
-    container_name: "valheim_testid1"
+    container_name: valheim_testid1
     ports:
       - "2456:2456/udp"
       - "2457:2457/udp"
     env_file:
-      - ".env"
-      #- ".valheim_testid1_env"
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: "2g"
+      - .env
     volumes:
-      - "/srv/allservers/valheim_testid1:/valheim"
+      # Persist world saves
+      - /srv/allservers/valheim_testid1/saves:/valheim-saves
+      # Persist only the parts of BepInEx that users customize
+      - /srv/allservers/valheim_testid1/BepInEx/plugins:/valheim/BepInEx/plugins
+      - /srv/allservers/valheim_testid1/BepInEx/config:/valheim/BepInEx/config
+      - /srv/allservers/valheim_testid1/BepInEx/patchers:/valheim/BepInEx/patchers
