@@ -154,6 +154,7 @@ class SFTPManager:
                     self.logger.info(
                         f"SFTP user {subscription_id} already exists, skipping"
                     )
+                    self._restart_sftp_server()
                     return ServerResult(
                         action="sftp_update",
                         success=True,
@@ -227,7 +228,9 @@ class SFTPManager:
                 config["services"]["sftp"]["volumes"] = []
 
             # Create new volume mapping
-            new_volume = f"/srv/allservers/{subscription_id}:/home/{subscription_id}/{game_type}:rw"
+            new_volume = (
+                f"/srv/allservers/{subscription_id}:/home/{subscription_id}/server:rw"
+            )
 
             # Check if volume already exists
             existing_volumes = config["services"]["sftp"]["volumes"]

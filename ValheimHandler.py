@@ -2,8 +2,9 @@ from customdataclasses import ValheimConfig
 from gameHandler import GameHandler
 import base64
 import json
-
+from portchecker import get_available_ports
 from typing import List, Dict
+
 
 
 class ValheimHandler(GameHandler):
@@ -18,7 +19,8 @@ class ValheimHandler(GameHandler):
 
     @property
     def default_ports(self) -> List[int]:
-        return [2456, 2457]
+        ports = get_available_ports(n=2)
+        return ports
 
     def parse_config(self, cfg_json: str) -> ValheimConfig:
         """Parse Valheim-specific configuration"""

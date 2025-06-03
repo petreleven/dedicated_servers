@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import shutil
 import logging
+import sys
 
 
 def run_cmd(cmd: str):
@@ -20,7 +21,7 @@ def create_copy_backup(src: Path):
         return
     if not src.is_file():
         raise RuntimeError(f"The src provided should be a file {str(src.resolve())}")
-    t = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H%M")
+    t = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
     src.resolve
     dest = str(src.resolve()) + f".backup.{t}"
     shutil.copy2(src, dest)
@@ -64,12 +65,12 @@ def deploy_sftp_server():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(handlers=[
-        logging.StreamHandler()])
+    logging.basicConfig(
+        handlers=[logging.StreamHandler(sys.stdout)], level=logging.INFO
+    )
     logger = logging.getLogger("deploy logger")
     servermgmnt_path: Path = Path("~/servermgmnt").expanduser()
     servermgmnt_path.mkdir(parents=True, exist_ok=True)
-
 
     logs_path = servermgmnt_path / "logs"
     docker_game_templates_path = servermgmnt_path / "docker-game-templates"
@@ -85,16 +86,16 @@ if __name__ == "__main__":
         if not p.exists():
             p.mkdir(exist_ok=True)
 
-    run_cmd("docker --version")
+    # run_cmd("docker --version")
     logger.info("Docker exists 👌🏿")
-    run_cmd("pip install pyaml")
-    logger.info("Installed pyaml 👌🏿")
+    # run_cmd("pip install pyml")
+    logger.info("Installed pyml 👌🏿")
 
     # deploy sftp server
     logger.info("Pulling atomz/sftp image")
-    run_cmd("docker pull atmoz/sftp")
+    # run_cmd("docker pull atmoz/sftp")
     deploy_sftp_server()
     # deploy here
     logger.info("Pulling atomz/sftp valheim_server:v0.0.1")
-    run_cmd("docker pull petreleven11/valheim_server:v0.0.1")
+    # run_cmd("docker pull petreleven11/valheim_server:v0.0.1")
     deploy_valheim(docker_game_templates_path)

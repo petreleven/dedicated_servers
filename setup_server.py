@@ -1,8 +1,11 @@
 import os
 import logging
+import pathlib
+import shutil
 import sys
 import argparse
 import subprocess
+import tempfile
 from typing import List, Tuple
 import requests
 import datetime
@@ -94,12 +97,12 @@ class GameServerManager:
 
         # Set up file paths
         template_path = os.path.join(
-            docker_game_template_path, f"{game_type}-template.yaml"
+            docker_game_template_path, f"{game_type}-template.yml"
         )
         env_template_file = os.path.join(docker_game_template_path, f".{game_type}_env")
         compose_file = os.path.join(
             subscription_compose_template_path,
-            f"docker-compose-{game_type}-{subscription_id}.yaml",
+            f"docker-compose-{game_type}-{subscription_id}.yml",
         )
         env_subscription_file = os.path.join(
             subscription_compose_template_path, f".{game_type}_{subscription_id}_env"
@@ -185,13 +188,14 @@ class GameServerManager:
             status="running",
             container_id=container_id,
             container_ip=container_ip,
+            ports =
         )
 
     def stop_server(self, subscription_id: str, game_type: str) -> ServerResult:
         """Stop game server"""
         compose_file = os.path.join(
             subscription_compose_template_path,
-            f"docker-compose-{game_type}-{subscription_id}.yaml",
+            f"docker-compose-{game_type}-{subscription_id}.yml",
         )
 
         if not os.path.exists(compose_file):
@@ -231,7 +235,7 @@ class GameServerManager:
         # Check if compose file exists
         compose_file = os.path.join(
             subscription_compose_template_path,
-            f"docker-compose-{game_type}-{subscription_id}.yaml",
+            f"docker-compose-{game_type}-{subscription_id}.yml",
         )
         if not os.path.exists(compose_file):
             return ServerResult(
@@ -249,7 +253,7 @@ class GameServerManager:
         """Get server status and metrics"""
         compose_file = os.path.join(
             subscription_compose_template_path,
-            f"docker-compose-{game_type}-{subscription_id}.yaml",
+            f"docker-compose-{game_type}-{subscription_id}.yml",
         )
 
         if not os.path.exists(compose_file):
@@ -364,11 +368,17 @@ class GameServerManager:
     def backup(self, subscription_id: str) -> ServerResult:
         now = datetime.datetime.now(datetime.timezone.utc)
         backup_source = f"/srv/allservers/{subscription_id}"
-        backup_target = (
-            f"/srv/backups/{subscription_id}-{now.strftime('%Y-%m-%d %H%M')}.tar.gz"
-        )
-        cmd = f"tar -czf {backup_target} {backup_source}"
+        backup_target = f"/srv/allservers/{subscription_id}/backup-{now.strftime('%Y-%m-%d-%H:%M')}.tar.gz"
+        tmp = pathlib.Path(__file__).resolve().parent / "tempbackup"
+        tmp.mkdir(exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            delete=False, dir=tmp, mode="w", suffix=".tar.gz"
+        ) as tmp_file:
+            pass
+
+        cmd = f"tar -czf {tmp_file.name} {backup_source}"
         return_code, stdout, stderr = self.run_command(cmd)
+        shutil.move(tmp_file.name, backup_target)
         try:
             if return_code == 0:
                 return ServerResult(
@@ -460,14 +470,14 @@ def main(argv: List[str]):
     parser.add_argument(
         "-p", "--port", type=int, nargs="+", help="List of game server ports"
     )
-    parser.add_argument(
-        "-g", "--game-type", required=True, help="Game type (minecraft, valheim, etc)"
-    )
+    parser.add_argument("-g", "--game-type", help="Game type (minecraft, valheim, etc)")
     parser.add_argument("-m", "--memory", default="2g", help="Memory limit (e.g. 2g)")
     parser.add_argument(
         "-c", "--cpu", type=float, default=2.0, help="CPU limit (e.g. 2.0)"
     )
-    parser.add_argument("--cfg-json", type=str, help="JSON Configuration of server")
+    parser.add_argument(
+        "--cfg-json", type=str, help="base64 encoded json Configuration of server"
+    )
 
     args = parser.parse_args(argv)
 
@@ -481,12 +491,11 @@ def main(argv: List[str]):
 
     # Execute requested action
     result = None
-
+    args.port = []
     if args.action == "start":
-        if not args.port:
-            handler = manager.registry.get_handler(args.game_type)
-            args.port = handler.default_ports
-            logger.info(f"Using default ports for {args.game_type}: {args.port}")
+        handler = manager.registry.get_handler(args.game_type)
+        args.port = handler.default_ports
+        logger.info(f"Using  ports for {args.game_type}: {args.port}")
 
         compose_file = manager.create_compose_file(
             args.subscription_id, args.port, args.memory, args.cpu, args.game_type
@@ -495,7 +504,7 @@ def main(argv: List[str]):
             args.game_type,
             args.subscription_id,
         )
-        result = manager.start_server(compose_file, args.subscription_id)
+        result = manager.start_server(compose_file, args.subscription_id, args.port)
 
     elif args.action == "stop":
         result = manager.stop_server(args.subscription_id, args.game_type)
@@ -520,12 +529,13 @@ def main(argv: List[str]):
     if result:
         compose_file = os.path.join(
             subscription_compose_template_path,
-            f"docker-compose-{args.game_type}-{args.subscription_id}.yaml",
+            f"docker-compose-{args.game_type}-{args.subscription_id}.yml",
         )
         logger.info(f"Finished {args.action} on {compose_file}")
 
         # Send result to API
         try:
+            logger.info(result.to_dict())
             requests.post(url=HOST_API, json=result.to_dict())
         except Exception as e:
             logger.error(f"Failed to send result to API: {e}")

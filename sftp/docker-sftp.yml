@@ -12,4 +12,4 @@ services:
     - ./users.conf:/etc/sftp/users.conf:ro
     - ./init.sh:/etc/sftp.d/init.sh:ro
     - /srv/allservers/admin:/home/admin/valheim
-    - /srv/allservers/kamuigamer:/home/kamuigamer/valheim:rw
+    - /srv/allservers/kamuigamer:/home/kamuigamer/server:rw
