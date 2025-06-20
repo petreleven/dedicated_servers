@@ -6,28 +6,27 @@ import sys
 import argparse
 import subprocess
 import tempfile
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict
 import requests
 import datetime
-from customdataclasses import ServerResult
-from gameRegistry import GameRegistry
-from sftpmanager import SFTPManager
 
+import gregistry
+from customdataclasses import ServerResult, GameConfig
+from sftpmanager import SFTPManager
 
 HOST_API = "http://127.0.0.1:8000/api/server_report"
 base_path = os.path.expanduser("~/servermgmnt")
 log_path = os.path.join(base_path, "logs")
 docker_game_template_path = os.path.join(base_path, "docker-game-templates")
-subscription_compose_template_path = os.path.join(
-    base_path, "subscription-docker-compose"
-)
+subscription_path = os.path.join(base_path, "subscription-docker-compose")
 game_configs_path = os.path.join(base_path, "game-configs")
+
 
 # Create directories
 for path in [
     log_path,
     docker_game_template_path,
-    subscription_compose_template_path,
+    subscription_path,
     game_configs_path,
 ]:
     os.makedirs(path, exist_ok=True)
@@ -48,9 +47,10 @@ class GameServerManager:
     """Main game server management class"""
 
     def __init__(self):
-        self.registry = GameRegistry()
+        self.registry = gregistry.GameRegistry()
 
-    def run_command(self, cmd: str) -> Tuple[int, str, str]:
+    @staticmethod
+    def run_command(cmd: str) -> Tuple[int, str, str]:
         """Execute shell command"""
         try:
             logger.debug(f"Executing: {cmd}")
@@ -80,86 +80,64 @@ class GameServerManager:
         cpu_limit: float,
         game_type: str,
     ) -> str:
-        # Set up environment variables
-        env = {
+        # common seetings for all template compse files
+        defaults = {
             "SUBSCRIPTION_ID": subscription_id,
             "MEMORY_LIMIT": memory_limit,
             "CPU_LIMIT": str(cpu_limit),
             "GAME_TYPE": game_type,
-            "NETWORK_NAME": "gameserver-net",
         }
-
-        # Add port mappings
         for i, port in enumerate(ports):
-            env[f"SUBSCRIPTION_PORT_{i}"] = str(port)
-
-        os.environ.update(env)
+            defaults[f"SUBSCRIPTION_PORT_{i}"] = str(port)
 
         # Set up file paths
-        template_path = os.path.join(
+        src_template_path = os.path.join(
             docker_game_template_path, f"{game_type}-template.yml"
         )
-        env_template_file = os.path.join(docker_game_template_path, f".{game_type}_env")
-        compose_file = os.path.join(
-            subscription_compose_template_path,
+        target_compose_file = os.path.join(
+            subscription_path,
             f"docker-compose-{game_type}-{subscription_id}.yml",
         )
-        env_subscription_file = os.path.join(
-            subscription_compose_template_path, f".{game_type}_{subscription_id}_env"
-        )
-
         # Verify template files exist
-        if not os.path.exists(template_path):
+        if not os.path.exists(src_template_path):
             raise Exception(
-                f"Template not found for game: {game_type} at {template_path}"
-            )
-        if not os.path.exists(env_template_file):
-            raise Exception(
-                f"Environment template not found for game: {game_type} at {env_template_file}"
+                f"Template not found for game: {game_type} at {src_template_path}"
             )
 
-        # Copy environment template
-        return_code, _, stderr = self.run_command(
-            f"cp -r {env_template_file} {env_subscription_file}"
+        handler = self.registry.get_handler(game_type)
+        # fills and creates compose target compose file as well as env file
+        handler.fill_compose_file(defaults=defaults, src_template_path=src_template_path,target_compose_file=target_compose_file)
+        handler.create_default_subscription_config_file(
+            subscription_path=subscription_path,
+            subscription_id=subscription_id,
+            docker_game_template_path=docker_game_template_path,
         )
-        if return_code != 0:
-            raise Exception(f"Unable to copy env template file: {stderr}")
 
-        # Generate compose file from template
-        cmd = f"envsubst < {template_path} > {compose_file}"
-        return_code, _, stderr = self.run_command(cmd)
-        if return_code != 0:
-            raise Exception(f"Unable to create compose file: {stderr}")
+        return target_compose_file
 
-        return compose_file
-
-    def start_server(self, compose_file: str, subscription_id: str) -> ServerResult:
+    def start_server(
+        self, compose_file: str, subscription_id: str, ports: Optional[List[int]]
+    ) -> ServerResult:
         """Start game server using docker compose"""
         logger.info(f"Starting server for {subscription_id}")
 
-        # Create network if it doesn't exist
-        network_cmd = "docker network create gameserver-net"
-        self.run_command(network_cmd)
-
         # Start containers
-        start_cmd = f"docker compose -f {compose_file} up -d"
+        start_cmd = f"docker compose -f {compose_file} -p {subscription_id} up -d"
         return_code, _, stderr = self.run_command(start_cmd)
         if return_code != 0:
             return ServerResult(
                 action="start",
-                success=False,
                 subscription_id=subscription_id,
                 status="failed",
                 error=f"Failed to start server: {stderr}",
             )
 
         # Get container ID
-        container_cmd = f"docker compose -f {compose_file} ps -q"
+        container_cmd = f"docker compose -f {compose_file} -p {subscription_id} ps -q"
         return_code, stdout, stderr = self.run_command(container_cmd)
         if return_code != 0:
             return ServerResult(
                 action="start",
-                success=False,
                 subscription_id=subscription_id,
                 status="failed",
                 error=f"Failed to get container id: {stderr}",
@@ -173,7 +151,6 @@ class GameServerManager:
         if return_code != 0:
             return ServerResult(
                 action="start",
-                success=False,
                 subscription_id=subscription_id,
                 status="failed",
                 error=f"Failed to get container ip: {stderr}",
@@ -183,36 +160,33 @@ class GameServerManager:
 
         return ServerResult(
             action="start",
-            success=True,
             subscription_id=subscription_id,
             status="running",
             container_id=container_id,
             container_ip=container_ip,
-            ports =
+            ports=ports,
         )
 
     def stop_server(self, subscription_id: str, game_type: str) -> ServerResult:
         """Stop game server"""
         compose_file = os.path.join(
-            subscription_compose_template_path,
+            subscription_path,
             f"docker-compose-{game_type}-{subscription_id}.yml",
         )
 
         if not os.path.exists(compose_file):
             return ServerResult(
                 action="stop",
-                success=False,
                 subscription_id=subscription_id,
                 status="not_found",
                 error="Server doesn't exist",
             )
 
-        stop_cmd = f"docker compose -f {compose_file} down"
+        stop_cmd = f"docker compose -f {compose_file} -p {subscription_id} down"
         return_code, _, stderr = self.run_command(stop_cmd)
         if return_code != 0:
             return ServerResult(
                 action="stop",
-                success=False,
                 subscription_id=subscription_id,
                 status="failed",
                 error=f"Failed to stop server: {stderr}",
@@ -220,7 +194,6 @@ class GameServerManager:
 
         return ServerResult(
             action="stop",
-            success=True,
             subscription_id=subscription_id,
             status="stopped",
         )
@@ -229,51 +202,48 @@ class GameServerManager:
         """Restart game server"""
         # Stop the server first
         stop_result = self.stop_server(subscription_id, game_type)
-        if not stop_result.success:
+        if stop_result.status != "stopped":
             return stop_result
 
         # Check if compose file exists
         compose_file = os.path.join(
-            subscription_compose_template_path,
+            subscription_path,
             f"docker-compose-{game_type}-{subscription_id}.yml",
         )
         if not os.path.exists(compose_file):
             return ServerResult(
                 action="restart",
-                success=False,
                 subscription_id=subscription_id,
                 status="not_found",
                 error="Server configuration not found",
             )
 
         # Start the server again
-        return self.start_server(compose_file, subscription_id)
+        return self.start_server(compose_file, subscription_id, None)
 
     def server_status(self, subscription_id: str, game_type: str) -> ServerResult:
         """Get server status and metrics"""
         compose_file = os.path.join(
-            subscription_compose_template_path,
+            subscription_path,
             f"docker-compose-{game_type}-{subscription_id}.yml",
         )
 
         if not os.path.exists(compose_file):
             return ServerResult(
                 action="status",
-                success=False,
                 subscription_id=subscription_id,
                 status="not_found",
                 error="Server not found",
             )
 
         # Get container ID
-        id_cmd = f"docker compose -f {compose_file} ps -q"
+        id_cmd = f"docker compose -f {compose_file} -p {subscription_id} ps -q"
         _, container_id, _ = self.run_command(id_cmd)
         container_id = container_id.strip()
 
         if not container_id:
             return ServerResult(
                 action="status",
-                success=True,
                 subscription_id=subscription_id,
                 status="stopped",
                 metrics={},
@@ -312,7 +282,6 @@ class GameServerManager:
 
         return ServerResult(
             action="status",
-            success=True,
             subscription_id=subscription_id,
             status=status,
             container_id=container_id if container_id else None,
@@ -325,41 +294,36 @@ class GameServerManager:
         """Update server configuration"""
         try:
             handler = self.registry.get_handler(game_type)
-            config = handler.parse_config(cfg_json)
+            config: GameConfig = handler.parse_config(cfg_json)
 
             if not handler.validate_config(config):
                 return ServerResult(
-                    action="configure",
-                    success=False,
+                    action="updateConfig",
                     subscription_id=subscription_id,
                     status="failed",
                     error="Invalid configuration",
                 )
 
-            # Generate environment variables
-            env_vars = handler.generate_env_vars(config, subscription_id)
-
-            # Write environment file
-            env_file = os.path.join(
-                subscription_compose_template_path,
-                f".{game_type}_{subscription_id}_env",
+            # Generate dict variables
+            env_vars: Dict[str, str] = handler.generate_env_vars(
+                config, subscription_id
+            )
+            # update the env file or appropriate file
+            handler.update_config_file(
+                env_vars=env_vars,
+                subscription_path=subscription_path,
+                subscription_id=subscription_id,
             )
 
-            with open(env_file, "w") as f:
-                for key, value in env_vars.items():
-                    f.write(f"{key}={value}\n")
-
             return ServerResult(
-                action="configure",
-                success=True,
+                action="updateConfig",
                 subscription_id=subscription_id,
                 status="configured",
             )
 
         except Exception as e:
             return ServerResult(
-                action="configure",
-                success=False,
+                action="updateConfig",
                 subscription_id=subscription_id,
                 status="failed",
                 error=str(e),
@@ -369,7 +333,7 @@ class GameServerManager:
         now = datetime.datetime.now(datetime.timezone.utc)
         backup_source = f"/srv/allservers/{subscription_id}"
         backup_target = f"/srv/allservers/{subscription_id}/backup-{now.strftime('%Y-%m-%d-%H:%M')}.tar.gz"
-        tmp = pathlib.Path(__file__).resolve().parent / "tempbackup"
+        tmp = pathlib.Path(__file__).resolve().parent / "temp"
         tmp.mkdir(exist_ok=True)
         with tempfile.NamedTemporaryFile(
             delete=False, dir=tmp, mode="w", suffix=".tar.gz"
@@ -383,7 +347,6 @@ class GameServerManager:
             if return_code == 0:
                 return ServerResult(
                     action="backup",
-                    success=True,
                     subscription_id=subscription_id,
                     status="completed",
                     metrics={
@@ -394,7 +357,6 @@ class GameServerManager:
             else:
                 return ServerResult(
                     action="backup",
-                    success=False,
                     subscription_id=subscription_id,
                     status="failed",
                     error=stderr,
@@ -402,7 +364,6 @@ class GameServerManager:
         except Exception as e:
             return ServerResult(
                 action="backup",
-                success=False,
                 subscription_id=subscription_id,
                 status="failed",
                 error=str(e),
@@ -428,7 +389,7 @@ class GameServerManager:
             result = self._sftp_manager.add_user_volume(game_type, subscription_id)
 
             # Log the result
-            if result.success:
+            if result.status == "completed":
                 logger.info(f"SFTP server updated successfully for {subscription_id}")
                 if result.metrics:
                     logger.info(
@@ -446,7 +407,6 @@ class GameServerManager:
             logger.error(f"Unexpected error updating SFTP server: {e}")
             return ServerResult(
                 action="sftp_update",
-                success=False,
                 subscription_id=subscription_id,
                 status="failed",
                 error=str(e),
@@ -454,9 +414,7 @@ class GameServerManager:
 
 
 def main(argv: List[str]):
-    # Initialize server manager
     manager = GameServerManager()
-
     """Main entry point"""
     parser = argparse.ArgumentParser("Game server management")
     parser.add_argument(
@@ -500,11 +458,14 @@ def main(argv: List[str]):
         compose_file = manager.create_compose_file(
             args.subscription_id, args.port, args.memory, args.cpu, args.game_type
         )
-        manager.update_sftp_server(
+        rstp = manager.update_sftp_server(
             args.game_type,
             args.subscription_id,
         )
-        result = manager.start_server(compose_file, args.subscription_id, args.port)
+        result = manager.start_server(compose_file, args.subscription_id, args.
+            port)
+        if rstp.metrics:
+            result.metrics=rstp.metrics
 
     elif args.action == "stop":
         result = manager.stop_server(args.subscription_id, args.game_type)
@@ -528,7 +489,7 @@ def main(argv: List[str]):
 
     if result:
         compose_file = os.path.join(
-            subscription_compose_template_path,
+            subscription_path,
             f"docker-compose-{args.game_type}-{args.subscription_id}.yml",
         )
         logger.info(f"Finished {args.action} on {compose_file}")

@@ -1,21 +1,22 @@
 services:
   valheim_base_server:
     image: petreleven11/valheim_server:v0.0.1
-    container_name: "valheim_${SUBSCRIPTION_ID}"
+    container_name: "valheim_{{SUBSCRIPTION_ID}}"
     ports:
-      - "${SUBSCRIPTION_PORT_0}:2456/udp"
-      - "${SUBSCRIPTION_PORT_1}:2457/udp"
+      - "{{SUBSCRIPTION_PORT_0}}:2456/udp"
+      - "{{SUBSCRIPTION_PORT_1}}:2457/udp"
     env_file:
-      - ".valheim_${SUBSCRIPTION_ID}_env"
+      - ".valheim_{{SUBSCRIPTION_ID}}_env"
+    restart: always
     deploy:
       resources:
         limits:
-          cpus: "${CPU_LIMIT}"
-          memory: "${MEMORY_LIMIT}"
+          cpus: "{{CPU_LIMIT}}"
+          memory: "{{MEMORY_LIMIT}}"
     volumes:
       # Persist world saves
-      - /srv/allservers/${SUBSCRIPTION_ID}/saves:/valheim-saves
+      - /srv/allservers/{{SUBSCRIPTION_ID}}/saves:/valheim-saves
         # Persist only the parts of BepInEx that users customize
-      - /srv/allservers/${SUBSCRIPTION_ID}/BepInEx/plugins:/valheim/BepInEx/plugins
-      - /srv/allservers/${SUBSCRIPTION_ID}/BepInEx/config:/valheim/BepInEx/config
-      - /srv/allservers/${SUBSCRIPTION_ID}/BepInEx/patchers:/valheim/BepInEx/patchers
+      - /srv/allservers/{{SUBSCRIPTION_ID}}/BepInEx/plugins:/valheim/BepInEx/plugins
+      - /srv/allservers/{{SUBSCRIPTION_ID}}/BepInEx/config:/valheim/BepInEx/config
+      - /srv/allservers/{{SUBSCRIPTION_ID}}/BepInEx/patchers:/valheim/BepInEx/patchers

@@ -1,7 +1,7 @@
-import pprint
 import subprocess
 import re
 from typing import List
+
 
 def _run_cmd(cmd: str):
     """Run a shell command and return (returncode, stdout, stderr)."""
@@ -10,6 +10,7 @@ def _run_cmd(cmd: str):
     )
     stdout, stderr = process.communicate()
     return process.returncode, stdout, stderr
+
 
 def _get_used_ports(stdout: str) -> List[str]:
     """Extract used port numbers from netstat output."""
@@ -20,7 +21,8 @@ def _get_used_ports(stdout: str) -> List[str]:
             used_ports.append(match.group(1))
     return used_ports
 
-def get_available_ports(start: int = 2000, end: int = 8000, n=5) -> List[int]:
+
+def get_available_ports(start: int = 2300, end: int = 8000, n=5) -> List[int]:
     """Return a list of available ports in the given range."""
     available_ports = []
     returncode, stdout, stderr = _run_cmd("ss -tuln")
@@ -33,5 +35,3 @@ def get_available_ports(start: int = 2000, end: int = 8000, n=5) -> List[int]:
             available_ports.append(port)
 
     return available_ports[:n]
-
-

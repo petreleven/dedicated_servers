@@ -42,4 +42,3 @@ services:
     - /srv/allservers/4aae454b-cdb2-4435-94b3-f60e0b6e2b7c:/home/4aae454b-cdb2-4435-94b3-f60e0b6e2b7c/server:rw
     - /srv/allservers/b7793af3-aaec-4f7a-bb1f-3bd87c65a6f2:/home/b7793af3-aaec-4f7a-bb1f-3bd87c65a6f2/server:rw
     - /srv/allservers/b7d94e5e-ef64-432b-b1a4-0ec6e3d8932f:/home/b7d94e5e-ef64-432b-b1a4-0ec6e3d8932f/server:rw
-    - /srv/allservers/b91122cc-67e3-4e5e-8bec-8e5250b9fea8:/home/b91122cc-67e3-4e5e-8bec-8e5250b9fea8/server:rw

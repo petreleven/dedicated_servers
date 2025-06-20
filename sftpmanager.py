@@ -143,7 +143,6 @@ class SFTPManager:
                 if not subscription_id or not game_type:
                     return ServerResult(
                         action="sftp_update",
-                        success=False,
                         subscription_id=subscription_id,
                         status="failed",
                         error="Invalid subscription_id or game_type",
@@ -157,7 +156,6 @@ class SFTPManager:
                     self._restart_sftp_server()
                     return ServerResult(
                         action="sftp_update",
-                        success=True,
                         subscription_id=subscription_id,
                         status="already_exists",
                     )
@@ -175,7 +173,7 @@ class SFTPManager:
                     # Restart SFTP server
                     restart_result = self._restart_sftp_server()
 
-                    if not restart_result.success:
+                    if restart_result.status != "running":
                         # Restore from backup on failure
                         self._restore_from_backup(compose_backup, users_backup)
                         return restart_result
@@ -185,11 +183,10 @@ class SFTPManager:
 
                     return ServerResult(
                         action="sftp_update",
-                        success=True,
                         subscription_id=subscription_id,
                         status="completed",
                         metrics={
-                            "username": subscription_id,
+                            "username": subscription_id[:4],
                             "password": password,
                             "mount_path": f"/home/{subscription_id}/{game_type}",
                             "server_path": f"/srv/allservers/{subscription_id}",
@@ -205,7 +202,6 @@ class SFTPManager:
                 self.logger.error(f"Failed to update SFTP server: {e}")
                 return ServerResult(
                     action="sftp_update",
-                    success=False,
                     subscription_id=subscription_id,
                     status="failed",
                     error=str(e),
@@ -270,7 +266,7 @@ class SFTPManager:
             # Create user configuration line
             # Format: username:password:uid:gid:home_dir:shell:chroot_dir
             user_line = (
-                f"{subscription_id}:{password}:{uid}:{gid}:::{subscription_id}\n"
+                f"{subscription_id[:4]}:{password}:{uid}:{gid}:::{subscription_id}\n"
             )
 
             # Append to users.conf atomically
@@ -340,7 +336,6 @@ class SFTPManager:
             if return_code != 0:
                 return ServerResult(
                     action="sftp_restart",
-                    success=False,
                     subscription_id="",
                     status="failed",
                     error=f"Failed to start SFTP server: {stderr}",
@@ -354,14 +349,12 @@ class SFTPManager:
                 self.logger.info("SFTP server restarted successfully")
                 return ServerResult(
                     action="sftp_restart",
-                    success=True,
                     subscription_id="",
                     status="running",
                 )
             else:
                 return ServerResult(
                     action="sftp_restart",
-                    success=False,
                     subscription_id="",
                     status="failed",
                     error="SFTP container not running after restart",
@@ -371,7 +364,6 @@ class SFTPManager:
             self.logger.error(f"Error restarting SFTP server: {e}")
             return ServerResult(
                 action="sftp_restart",
-                success=False,
                 subscription_id="",
                 status="failed",
                 error=str(e),
@@ -411,7 +403,6 @@ class SFTPManager:
                 if not self._user_exists(subscription_id):
                     return ServerResult(
                         action="sftp_remove",
-                        success=True,
                         subscription_id=subscription_id,
                         status="not_found",
                     )
@@ -429,13 +420,12 @@ class SFTPManager:
                     # Restart SFTP server
                     restart_result = self._restart_sftp_server()
 
-                    if not restart_result.success:
+                    if restart_result.status != "running":
                         self._restore_from_backup(compose_backup, users_backup)
                         return restart_result
 
                     return ServerResult(
                         action="sftp_remove",
-                        success=True,
                         subscription_id=subscription_id,
                         status="removed",
                     )
@@ -448,7 +438,6 @@ class SFTPManager:
                 self.logger.error(f"Failed to remove SFTP user: {e}")
                 return ServerResult(
                     action="sftp_remove",
-                    success=False,
                     subscription_id=subscription_id,
                     status="failed",
                     error=str(e),

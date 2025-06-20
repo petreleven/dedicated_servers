@@ -1,10 +1,16 @@
+import pathlib
+import shutil
+import tempfile
 from customdataclasses import ValheimConfig
 from gameHandler import GameHandler
 import base64
 import json
 from portchecker import get_available_ports
 from typing import List, Dict
+from jinja2 import Environment, select_autoescape, FileSystemLoader
+import os
 
+from setup_server import GameServerManager
 
 
 class ValheimHandler(GameHandler):
@@ -21,6 +27,9 @@ class ValheimHandler(GameHandler):
     def default_ports(self) -> List[int]:
         ports = get_available_ports(n=2)
         return ports
+
+    def get_env_file_format(self, subscription_id) -> str:
+        return f".{self.game_type}_{subscription_id}_env"
 
     def parse_config(self, cfg_json: str) -> ValheimConfig:
         """Parse Valheim-specific configuration"""
@@ -85,3 +94,58 @@ class ValheimHandler(GameHandler):
             "PASSIVE_MOBS": str(config.passive_mobs).lower(),
             "NO_BUILD_COST": str(config.no_build_cost).lower(),
         }
+
+    def fill_compose_file(self, defaults: Dict, src_template_path:str,target_compose_file:str):
+        src_path = pathlib.Path(src_template_path)
+        j_env = Environment(
+            loader=FileSystemLoader(str(src_path.absolute().parent)),
+            autoescape=select_autoescape(),
+        )
+        j_template = j_env.get_template(src_path.name)
+        s = j_template.render(defaults)
+        os.makedirs("./tmp", exist_ok=True)
+        with tempfile.NamedTemporaryFile(delete=False, mode="w", dir="./temp") as f:
+            f.write(s)
+
+        shutil.move(f.name, target_compose_file)
+        if not pathlib.Path(target_compose_file).exists():
+            raise FileNotFoundError(compose_file)
+
+    def update_config_file(
+        self, env_vars: Dict, subscription_path: str, subscription_id: str
+    ):
+        # Write environment file
+        env_file = os.path.join(
+            subscription_path,
+            self.get_env_file_format(subscription_id),
+        )
+        os.makedirs("./tmp", exist_ok=True)
+        with tempfile.NamedTemporaryFile(delete=False, mode="w", dir="./temp") as f:
+            for key, value in env_vars.items():
+                f.write(f"{key}={value}\n")
+
+        shutil.move(src=f.name, dst=env_file)
+
+    def create_default_subscription_config_file(
+        self,
+        subscription_path: str,
+        subscription_id: str,
+        docker_game_template_path: str,
+    ):
+        src_env_template_file = os.path.join(
+            docker_game_template_path, f".{self.game_type}_env"
+        )
+        if not os.path.exists(src_env_template_file):
+            raise Exception(
+                f"Environment template not found for game: {self.game_type} at {src_env_template_file}"
+            )
+
+        target_env_subscription_file = os.path.join(
+            subscription_path, self.get_env_file_format(subscription_id)
+        )
+        # Copy environment template
+        return_code, _, stderr = GameServerManager.run_command(
+            f"cp -r {src_env_template_file} {target_env_subscription_file}"
+        )
+        if return_code != 0:
+            raise Exception(f"Unable to copy env template file: {stderr}")

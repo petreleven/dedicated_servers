@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Union, Optional
+from typing import Dict, List, Union, Optional
 
 
 @dataclass
@@ -7,18 +7,17 @@ class ServerResult:
     """Standardized result structure"""
 
     action: str
-    success: bool
     subscription_id: str
     status: str
     error: Optional[str] = None
     container_id: Optional[str] = None
     container_ip: Optional[str] = None
     metrics: Optional[Dict] = None
+    ports: Optional[List[int]] = None
 
     def to_dict(self) -> Dict[str, Union[bool, str, int, dict]]:
         result = {
             "action": self.action,
-            "success": self.success,
             "subscription_id": self.subscription_id,
             "status": self.status,
         }
@@ -30,6 +29,8 @@ class ServerResult:
             result["container_ip"] = self.container_ip
         if self.metrics:
             result["metrics"] = self.metrics
+        if self.ports:
+            result["ports"] = self.ports
         return result
 
 
